@@ -15,3 +15,7 @@ func NowUTCMilli() int64 {
 func TimeZero() time.Time {
 	return time.Time{}
 }
+
+func UnixDays(t time.Time) int64 {
+	return t.Unix() / 86400
+}
