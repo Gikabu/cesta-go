@@ -3,11 +3,11 @@ package cesta
 import "time"
 
 func GetCurrentBase34Date() (string, error) {
-	return TryEncodeBase34(nowUTCDays())
+	return TryEncodeBase34(nowUnixDays())
 }
 
 func CurrentBase34Date() string {
-	code, err := TryEncodeBase34(nowUTCDays())
+	code, err := TryEncodeBase34(nowUnixDays())
 	if err != nil {
 		panic(err)
 	}

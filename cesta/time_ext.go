@@ -10,8 +10,8 @@ func nowUTCMilli() int64 {
 	return time.Now().UTC().UnixMilli()
 }
 
-func nowUTCDays() int64 {
-	return time.Now().UTC().Unix() / 86400
+func nowUnixDays() int64 {
+	return unixDays(nowUTC())
 }
 
 func unixDays(t time.Time) int64 {
