@@ -19,7 +19,7 @@ Quick start
 Get the package:
 
 ``` bash
-$ go get github.com/Gikabu/cesta-go/cesta
+go get github.com/Gikabu/cesta-go/cesta
 ```
 
 ## Features
