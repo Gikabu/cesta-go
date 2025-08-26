@@ -1,5 +1,5 @@
 # cesta-go
-A set of Go packages for basic utils.
+A set of Go packages for your project's basic utils.
 
 ## Packages
 | Name             | Description                      | Notes                                  |
