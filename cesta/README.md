@@ -1,6 +1,6 @@
 # cesta
 
-This package provides basic utils.
+This package provides general utils.
 
 ```go
 package main
