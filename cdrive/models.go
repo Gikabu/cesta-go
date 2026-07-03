@@ -1,8 +1,6 @@
 package drive
 
-import (
-	"time"
-)
+import "time"
 
 type NewBlob struct {
 	Key         string

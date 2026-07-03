@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"time"
 )
 
 var perm os.FileMode = 0744
@@ -21,6 +22,10 @@ func initFSDrive(config FSConfig) *FSDrive {
 }
 
 func (f *FSDrive) ListBlobs(prefix string) ([]string, error) {
+	return f.ListBlobsUntil(prefix, nil)
+}
+
+func (f *FSDrive) ListBlobsUntil(prefix string, until *time.Time) ([]string, error) {
 	basePath := fsBasePath(f.UploadPath, prefix)
 	files := make([]string, 0)
 
@@ -28,6 +33,9 @@ func (f *FSDrive) ListBlobs(prefix string) ([]string, error) {
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
+			}
+			if until != nil && info.ModTime().After(*until) {
+				return nil
 			}
 			if !info.IsDir() {
 				files = append(files, prefix+path[len(basePath)+1:])

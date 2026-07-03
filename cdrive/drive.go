@@ -1,12 +1,20 @@
 package drive
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"time"
+)
 
 type S3Config struct {
 	Region            string `yaml:"region"`
 	AccessKeyID       string `yaml:"accessKeyID"`
 	SecretAccessKey   string `yaml:"secretAccessKey"`
 	BucketName        string `yaml:"bucketName"`
+	Endpoint          string `yaml:"endpoint"`
+	PublicBaseURL     string `yaml:"publicBaseURL"`
+	KeyPrefix         string `yaml:"keyPrefix"`
+	Provider          string `yaml:"provider"`
 	CloudFrontBaseURL string `yaml:"cloudFrontBaseURL"`
 }
 
@@ -29,36 +37,112 @@ type BaseDrive struct {
 }
 
 func InitWithConfig(config Config) *BaseDrive {
-	base := &BaseDrive{
+	return &BaseDrive{
 		tempOpt: config.TempOpt,
 		fs:      initFSDrive(config.FS),
 		s3:      initS3Drive(config.S3),
 	}
-	return base
 }
 
-func (d *BaseDrive) S3(ctx context.Context) *S3Drive {
-	s3Drive := d.s3
-	s3Drive.ctx = ctx
-	return s3Drive
-}
-
-func (d *BaseDrive) FS() *FSDrive {
-	return d.fs
-}
-
-func (d *BaseDrive) Temp() TempDrive {
-	switch d.tempOpt {
+func (d *BaseDrive) Object(ctx context.Context, opt Option) *ObjectDrive {
+	switch opt {
+	case FSDriveOption:
+		return newObjectDrive(FSDriveOption, d.fs)
 	case S3DriveOption:
-		return d.s3
+		return newObjectDrive(S3DriveOption, d.s3.withContext(ctx))
+	case R2DriveOption:
+		return newObjectDrive(R2DriveOption, d.s3.withContext(ctx))
 	default:
-		return d.fs
+		return newObjectDrive(FSDriveOption, d.fs)
 	}
 }
 
-type TempDrive interface {
+func (d *BaseDrive) S3(ctx context.Context) *ObjectDrive {
+	return d.Object(ctx, S3DriveOption)
+}
+
+func (d *BaseDrive) R2(ctx context.Context) *ObjectDrive {
+	return d.Object(ctx, R2DriveOption)
+}
+
+func (d *BaseDrive) Cloud(ctx context.Context) *ObjectDrive {
+	return d.Object(ctx, d.s3.config.cloudOption())
+}
+
+func (d *BaseDrive) FS() *ObjectDrive {
+	return d.Object(context.Background(), FSDriveOption)
+}
+
+func (d *BaseDrive) Temp(ctx context.Context) *ObjectDrive {
+	return d.Object(ctx, d.tempOpt)
+}
+
+type objectDriveBackend interface {
 	ListBlobs(prefix string) ([]string, error)
+	ListBlobsUntil(prefix string, until *time.Time) ([]string, error)
 	GetBlobByKey(key string) (*GetBlob, error)
 	SaveBlob(b *NewBlob) error
+	SaveBlobWithResult(b *NewBlob) (*SaveBlobResult, error)
 	DeleteBlob(key string) error
+}
+
+type ObjectDrive struct {
+	opt     Option
+	backend objectDriveBackend
+}
+
+func newObjectDrive(opt Option, backend objectDriveBackend) *ObjectDrive {
+	return &ObjectDrive{opt: opt, backend: backend}
+}
+
+func (d *ObjectDrive) Option() Option {
+	return d.opt
+}
+
+func (d *ObjectDrive) ListBlobs(prefix string) ([]string, error) {
+	if d == nil || d.backend == nil {
+		return nil, fmt.Errorf("object drive is not configured")
+	}
+	return d.backend.ListBlobs(prefix)
+}
+
+func (d *ObjectDrive) ListBlobsUntil(prefix string, until *time.Time) ([]string, error) {
+	if d == nil || d.backend == nil {
+		return nil, fmt.Errorf("object drive is not configured")
+	}
+	return d.backend.ListBlobsUntil(prefix, until)
+}
+
+func (d *ObjectDrive) GetBlobByKey(key string) (*GetBlob, error) {
+	if d == nil || d.backend == nil {
+		return nil, fmt.Errorf("object drive is not configured")
+	}
+	return d.backend.GetBlobByKey(key)
+}
+
+func (d *ObjectDrive) SaveBlob(b *NewBlob) error {
+	if d == nil || d.backend == nil {
+		return fmt.Errorf("object drive is not configured")
+	}
+	return d.backend.SaveBlob(b)
+}
+
+func (d *ObjectDrive) SaveBlobWithResult(b *NewBlob) (*SaveBlobResult, error) {
+	if d == nil || d.backend == nil {
+		return nil, fmt.Errorf("object drive is not configured")
+	}
+	return d.backend.SaveBlobWithResult(b)
+}
+
+func (d *ObjectDrive) DeleteBlob(key string) error {
+	if d == nil || d.backend == nil {
+		return fmt.Errorf("object drive is not configured")
+	}
+	return d.backend.DeleteBlob(key)
+}
+
+func (s *S3Drive) withContext(ctx context.Context) *S3Drive {
+	s3Drive := *s
+	s3Drive.ctx = ctx
+	return &s3Drive
 }
